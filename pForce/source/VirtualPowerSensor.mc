@@ -1,5 +1,6 @@
-using Toybox.Lang;
-using Toybox.Math;
+using Toybox.Lang as Lang;
+using Toybox.Math as Math;
+using Toybox.System as Sys;
 
 const DEF_RWEIGHT		= 75.0;
 const DEF_RHEIGHT		= 1.75;
@@ -13,7 +14,7 @@ const DEF_CADENCE		= 85.0;
 const MIN_SLOPE			= -20.0;
 const MAX_SLOPE			= 20.0;
 
-class PPoint extends Lang.Object {
+class VirtualPowerSensor extends Lang.Object {
 
 	// constants
     var cCad				= 0.002;
@@ -25,7 +26,6 @@ class PPoint extends Lang.Object {
     var afCATireH 		= 0.9;
     var afAFrame 		= 0.048;
     var ATire 			= 0.031;
-
     var CwaBike = afCdBike * (afCATireV * ATire + afCATireH * ATire + afAFrame);
  
  	// static parameters - from app properties
@@ -54,19 +54,8 @@ class PPoint extends Lang.Object {
 	var deltaAltitude	= 0.0;	// alt diff since last update
 	var slope			= 0.0;	// grade slope in percentage (-20% - 20%)
 	var cadence			= DEF_CADENCE;
-	
-	function initialize () {
-		var forceDefaults = {};
-		setProps ( forceDefaults );
-	}
-	
-	function envelope ( value, minvalue, maxvalue, defaultval ) {
-		return ( value > minvalue && value < maxvalue ? value : defaultval );
-	}
-	
-	
+
 	function setProps ( info ) {
-	
 		rWeight = ( info.hasKey(:rWeight) ? info.get(:rWeight) : DEF_RWEIGHT );
 		rHeight = ( info.hasKey(:rHeight) ? info.get(:rHeight) : DEF_RHEIGHT );
 		bWeight = ( info.hasKey(:bWeight) ? info.get(:bWeight) : DEF_BWEIGHT);
@@ -74,6 +63,16 @@ class PPoint extends Lang.Object {
 		temp = ( info.hasKey(:temp) ? info.get(:temp) : DEF_TEMP );
 		windHeading = ( info.hasKey(:windHeading) ? info.get(:windHeading) : DEF_WINDHEADING );
 		windSpeed = ( info.hasKey(:windSpeed) ? info.get(:windSpeed) : DEF_WINDSPEED );
+	}
+	
+	function initialize () {
+		var initData = { };
+		Sys.println(initData.isEmpty());
+		setProps ( initData );
+	}
+	
+	function envelope ( value, minvalue, maxvalue, defaultval ) {
+		return ( value > minvalue && value < maxvalue ? value : defaultval );
 	}
 	
 	function setData ( info ) {

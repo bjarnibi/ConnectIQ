@@ -2,22 +2,24 @@ using Toybox.Lang as Lang;
 using Toybox.System as Sys;
 using Toybox.Sensor as Sensor;
 
+const DEF_TEMPERATURE	= 10.0;
+
 class TemperatureSensor extends Lang.Object {
 
-	hidden var mCurrentTemp = 15;  // degrees Celcius
+	hidden var mCurrentTemp = DEF_TEMPERATURE;  // degrees Celcius
 	
-	function initialize() {
-	//	var availableSensors = Sensor.setEnabledSensors([Sensor.SENSOR_TEMPERATURE]);
-	//    Sensor.enableSensorEvents(method(:onSensor));
-	//    Sys.println(availableSensors);
+	function initialize(activeSensor) {	
+		var availableSensors = null;
+
+		mCurrentTemp = DEF_TEMP;				
+		if (activeSensor) {
+			availableSensors = Sensor.setEnabledSensors([Sensor.SENSOR_TEMPERATURE]);
+	  		Sensor.enableSensorEvents(method(:onSensor));
+		}
 	}
 	
 	hidden function onSensor (info) {
-		
-		if (info has :temperature) {
-			// we have temp
-			mCurrentTemp = info.temperature;
-		}
+		mCurrentTemp = (info has :temperature ?  info.temperature : mCurrentTemp );
 	}
 	
 	function currentTemp() {
@@ -27,8 +29,5 @@ class TemperatureSensor extends Lang.Object {
 	function setTemp(temp) {
 		mCurrentTemp = temp;
 	} 
-	
-	function cleanup() {
-	}
-	
+		
 }

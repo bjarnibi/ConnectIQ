@@ -1,10 +1,25 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.UserProfile as User;
+using Toybox.System as Sys;
+using Toybox.Lang as Lang;
 
 const Q_NONE = Gfx.COLOR_RED;
 const Q_POOR = Gfx.COLOR_YELLOW;
 const Q_GOOD = Gfx.COLOR_GREEN;
+
+// need to redefine these constants since access to Position module is not allowed from datafeilds not even the constants !
+//		QUALITY_NOT_AVAILABLE = 0	GPS is not available
+//		QUALITY_LAST_KNOWN = 1		The Location is based on the last known GPS fix.
+//		QUALITY_POOR = 2		The Location was calculated with a poor GPS fix. Only a 2-D GPS fix is available, likely due to a limited number of tracked satellites.
+//		QUALITY_USABLE = 3 	The Location was calculated with a usable GPS fix. A 3-D GPS fix is available, with marginal HDOP (horizontal dilution of precision)
+//		QUALITY_GOOD = 4		The Location was calculated with a good GPS fix. A 3-D GPS fix is available, with good-to-excellent HDOP (horizontal dilution of precision).      
+
+const		GPS_NOT_AVAILABLE = 0;	//GPS is not available
+const		GPS_LAST_KNOWN = 1;		//The Location is based on the last known GPS fix.
+const		GPS_POOR = 2;			//The Location was calculated with a poor GPS fix. Only a 2-D GPS fix is available, likely due to a limited number of tracked satellites.
+const		GPS_USABLE = 3; 			//The Location was calculated with a usable GPS fix. A 3-D GPS fix is available, with marginal HDOP (horizontal dilution of precision)
+const		GPS_GOOD = 4;			//The Location was calculated with a good GPS fix. A 3-D GPS fix is available, with good-to-excellent HDOP (horizontal dilution of precision).      
 
 class pForceView extends Ui.DataField {
 
@@ -12,48 +27,39 @@ class pForceView extends Ui.DataField {
     
     hidden var mUserProfile 	 = null;
 	hidden var mTempSensor 	 = null;
-
-	hidden var mPPoints 		 = null;
-	hidden var mCurrentPoint  = 0;
+	hidden var mPower 		 = null;
 
 	hidden var mDataQuality = Q_NONE;
 
-	var props = {
-		:rWeight			=> ,
-		:rHeight			=> ,
-		:bWeight			=> ,
-		:crr				=> ,
-		:temp			=> ,
-		:windHeading		=> ,
-		:windSpeed		=>
-	}
-	var data = {
-		:timestamp		=> ,
-		:bearing			=> ,
-		:speed			=> ,
-		:distance		=> ,
-		:altitude		=> ,
-		:cadence			=>
-	}
-
 	function getProps() {
+		
 		// get user weight and height from the user profile   .heigth (cm) .weight (grams)		
-		mTemperature.setTemp(10);
-	}
-
-	function initParams() {
 		mUserProfile 	= User.getProfile();
-		mTempSensor 		= new TemperatureSensor();	
-		mPP 				= new PPoint();	
-		mPP.setWeight 
+		mTempSensor.setTemp(10);
+		
+		// TODO Read props from app proerties
+		var props = {
+			:rWeight			=> mUserProfile.weight,
+			:rHeight			=> mUserProfile.height,
+			:bWeight			=> 7.5,
+			:crr				=> 0.0031,
+			:temp			=> mTempSensor.currentTemp(),
+			:windHeading		=> 90.0,
+			:windSpeed		=> 10.0
+		};
+		
+		mPower.setProps ( props );		
 	}
 
     function initialize() {
-        DataField.initialize();
-        mValue = 0.0f;
-   
-        initParams();
+        
+        DataField.initialize();        
+        	mTempSensor 		= new TemperatureSensor( false );	
+		mPower 			= new VirtualPowerSensor();
+		  		
         getProps();
+        
+        mValue = 0.0f;   
     }
 
     // Set your layout here. Anytime the size of obscurity of
@@ -94,54 +100,56 @@ class pForceView extends Ui.DataField {
     // Calculate a value and save it locally in this method.
     // Note that compute() and onUpdate() are asynchronous, and there is no
     // guarantee that compute() will be called before onUpdate().
-    function compute(info) {
     
-    		mLP = mCP 
-        var dataQuality = 7;
-        
-        	if (info has :altitude && info.altitude != null) { 			// meters
-        		mCP.altitude = info.altitude;		
-        	} else {
-        		dataQuality -= 1;
-        	}
-        	
-        	if (info has :altitude && info.altitude != null) { 			// meters
-        		
-        	} else {
-        		dataQuality -= 1;
-        	}
-        	
-    		info.currentSpeed  		// meters per second
-		info.currentHeading  	// true north referenced in radians
-		
-		info.currentLocation
-		info.currentLocationAccuracy
-		
-		QUALITY_NOT_AVAILABLE = 0	GPS is not available
-		QUALITY_LAST_KNOWN = 1		The Location is based on the last known GPS fix.
-		QUALITY_POOR = 2		The Location was calculated with a poor GPS fix. Only a 2-D GPS fix is available, likely due to a limited number of tracked satellites.
-		QUALITY_USABLE = 3 	The Location was calculated with a usable GPS fix. A 3-D GPS fix is available, with marginal HDOP (horizontal dilution of precision)
-		QUALITY_GOOD = 4		The Location was calculated with a good GPS fix. A 3-D GPS fix is available, with good-to-excellent HDOP (horizontal dilution of precision).
+    hidden function addKey ( point, key, value ) {
+    		if (  value != null ) {
+			point.put( key, value );
+			return 1;
+		}
+		return 0;
+	}    			
+    
+    hidden function dataQuality ( locationAccuracy, pointQuality ) {
+    
+    		Sys.println (Lang.format("Loc acc $1$  point qual $2$ \n", [locationAccuracy, pointQuality]) );
+    		mDataQuality = locationAccuracy + pointQuality;
+    	}
+    
+    function compute(info) {
+ 
+	 	var datapoint = { };
+/*			:timestamp		=> 0,
+			:bearing			=> 0,
+			:speed			=> 0,
+			:distance		=> 0,
+			:altitude		=> 0,
+			:cadence			=> 0, 
 
-		
-		info.elapsedDistance  	// meters
-		info.elapsedTime			// milliseconds
+			:heartrate		=> 0,
+			:power			=> 0
+		};
+*/ 
+		   
+        var dataQuality = 0;
         
-        if(info has :currentHeartRate){
-            if(info.currentHeartRate != null){
-                mValue = info.currentHeartRate;
-            } else {
-                mValue = 0.0f;
-            }
-        }
+        	if (info has :elapsedTime ) {   	dataQuality += addKey ( datapoint, :timestamp, info.elapsedTime ); 	}
+        	if (info has :altitude ) {   	dataQuality += addKey ( datapoint, :altitude, info.altitude ); 	}
+        	if (info has :currentSpeed ) {   dataQuality += addKey ( datapoint, :speed, info.currentSpeed ); 	}
+        	if (info has :currentHeading ) {   dataQuality += addKey ( datapoint, :bearing, info.currentHeading ); 	}
+        	if (info has :elapsedDistance ) {   dataQuality += addKey ( datapoint, :distance, info.elapsedDistance ); 	}
+        	if (info has :currentCadence ) {   dataQuality += addKey ( datapoint, :cadence, info.currentCadence ); 	}
+
+        	if (info has :currentHeartRate ) {   addKey ( datapoint, :heartrate, info.currentHeartRate ); 	}
+        	if (info has :currentPower ) {   addKey ( datapoint, :power, info.currentPower ); 	}
+
+		mDataQuality = 
+			dataQuality ( (info has :currentLocationAccuracy && info.currentLocationAccuracy != null ? info.currentLocationAccuracy : GPS_NOT_AVAILABLE), dataQuality );
+		
+		mPower.setData ( datapoint );
+		
+		mValue = mPower.calcPower();
+		        	        	        				
     }
-
-
-	hidden function computePower () {
-	
-
-	
-	}
 
 
     // Display the value you computed here. This will be called
