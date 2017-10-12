@@ -64,6 +64,7 @@ class PPoint extends Lang.Object {
 		return ( value > minvalue && value < maxvalue ? value : defaultval );
 	}
 	
+	
 	function setProps ( info ) {
 	
 		rWeight = ( info.hasKey(:rWeight) ? info.get(:rWeight) : DEF_RWEIGHT );

@@ -6,27 +6,46 @@ const Q_NONE = Gfx.COLOR_RED;
 const Q_POOR = Gfx.COLOR_YELLOW;
 const Q_GOOD = Gfx.COLOR_GREEN;
 
-
-
 class pForceView extends Ui.DataField {
 
     hidden var mValue;
     
-    hidden var mUserProfile = null;
-	hidden var mTemperature = null;
+    hidden var mUserProfile 	 = null;
+	hidden var mTempSensor 	 = null;
+
+	hidden var mPPoints 		 = null;
+	hidden var mCurrentPoint  = 0;
+
 	hidden var mDataQuality = Q_NONE;
 
+	var props = {
+		:rWeight			=> ,
+		:rHeight			=> ,
+		:bWeight			=> ,
+		:crr				=> ,
+		:temp			=> ,
+		:windHeading		=> ,
+		:windSpeed		=>
+	}
+	var data = {
+		:timestamp		=> ,
+		:bearing			=> ,
+		:speed			=> ,
+		:distance		=> ,
+		:altitude		=> ,
+		:cadence			=>
+	}
 
 	function getProps() {
-		// get user weight and height from the user profile   .heigth (cm) .weight (grams)
-		
+		// get user weight and height from the user profile   .heigth (cm) .weight (grams)		
 		mTemperature.setTemp(10);
-		
 	}
 
 	function initParams() {
-		mUserProfile = User.getProfile();
-		mTemperature = new TemperatureSensor();		
+		mUserProfile 	= User.getProfile();
+		mTempSensor 		= new TemperatureSensor();	
+		mPP 				= new PPoint();	
+		mPP.setWeight 
 	}
 
     function initialize() {
@@ -76,10 +95,12 @@ class pForceView extends Ui.DataField {
     // Note that compute() and onUpdate() are asynchronous, and there is no
     // guarantee that compute() will be called before onUpdate().
     function compute(info) {
+    
+    		mLP = mCP 
         var dataQuality = 7;
         
         	if (info has :altitude && info.altitude != null) { 			// meters
-        		
+        		mCP.altitude = info.altitude;		
         	} else {
         		dataQuality -= 1;
         	}
