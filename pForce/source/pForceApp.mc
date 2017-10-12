@@ -1,6 +1,9 @@
 using Toybox.Application as App;
+using Toybox.WatchUi as Ui;
 
 class pForceApp extends App.AppBase {
+
+	var mMainView = null;
 
     function initialize() {
         AppBase.initialize();
@@ -16,7 +19,15 @@ class pForceApp extends App.AppBase {
 
     //! Return the initial view of your application here
     function getInitialView() {
-        return [ new pForceView() ];
+    		mMainView = new pForceView();
+        return [ mMainView ];
+    }
+
+    function onSettingsChanged()    {
+    	if (mMainView != null) {
+    		mMainView.getProps();
+    		}
+	    Ui.requestUpdate();
     }
 
 }

@@ -12,7 +12,7 @@ class TemperatureSensor extends Lang.Object {
 	//    Sys.println(availableSensors);
 	}
 	
-	function onSensor (info) {
+	hidden function onSensor (info) {
 		
 		if (info has :temperature) {
 			// we have temp
@@ -23,6 +23,10 @@ class TemperatureSensor extends Lang.Object {
 	function currentTemp() {
 		return mCurrentTemp;
 	}
+	
+	function setTemp(temp) {
+		mCurrentTemp = temp;
+	} 
 	
 	function cleanup() {
 	}
