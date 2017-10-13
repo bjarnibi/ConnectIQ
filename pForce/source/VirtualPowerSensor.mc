@@ -10,6 +10,8 @@ const DEF_TEMP			= 10.0;
 const DEF_WINDHEADING	= 0.0;
 const DEF_WINDSPEED		= 0.0;
 const DEF_CADENCE		= 85.0;
+const DEF_DRAFT 			= 1.0;
+const DEF_CDA			= 0.0;
 
 const MIN_SLOPE			= -20.0;
 const MAX_SLOPE			= 20.0;
@@ -29,15 +31,17 @@ class VirtualPowerSensor extends Lang.Object {
     var CwaBike = afCdBike * (afCATireV * ATire + afCATireH * ATire + afAFrame);
  
  	// static parameters - from app properties
-	var rWeight 		= 75.0;		// Rider weight in kg
-	var rHeight 		= 1.92; 		// Rider height in in metres
-	var bWeight		= 9.0;		// Bike weight in kg
+	var rWeight 		= DEF_RWEIGHT;		// Rider weight in kg
+	var rHeight 		= DEF_RHEIGHT; 		// Rider height in in metres
+	var bWeight		= DEF_BWEIGHT;		// Bike weight in kg
 
 	// Semi-static 
-	var temp				= 10.0;	// Celcius
-	var windHeading		= 0.0;  	// degrees
-	var windSpeed		= 0.0;  // km/s
-    var CrEff 			= 0.0031;  // crr CrV Coefficient of Rolling Resistnance
+	var temp				= DEF_TEMP;	// Celcius
+	var windHeading		= DEF_WINDHEADING;  	// degrees
+	var windSpeed		= DEF_WINDSPEED;  // km/s
+    var CrEff 			= DEF_CREFF;  // crr CrV Coefficient of Rolling Resistnance
+    var draft			= DEF_DRAFT;
+    var CdA				= DEF_CDA;
     
 	// dynamic parameters - updated every second 
 	var timestamp		= 0;		// milliseconds
@@ -46,6 +50,7 @@ class VirtualPowerSensor extends Lang.Object {
 	var bearing			= 0.0;  // 
 	var speed			= 0.0;	// metres / sec
 	var accel			= 0.0;  // acceleration m/s/s Vd/Td
+	var watts			= 0.0;
 	
 	var distance 		= 0.0;  // distance metres
 	var deltaDistance	= 0.0;  // distance since last update metres
@@ -56,19 +61,19 @@ class VirtualPowerSensor extends Lang.Object {
 	var cadence			= DEF_CADENCE;
 
 	function setProps ( info ) {
-		rWeight = ( info.hasKey(:rWeight) ? info.get(:rWeight) : DEF_RWEIGHT );
-		rHeight = ( info.hasKey(:rHeight) ? info.get(:rHeight) : DEF_RHEIGHT );
-		bWeight = ( info.hasKey(:bWeight) ? info.get(:bWeight) : DEF_BWEIGHT);
-		CrEff = ( info.hasKey(:crr) ? info.get(:crr) : DEF_CREFF );
-		temp = ( info.hasKey(:temp) ? info.get(:temp) : DEF_TEMP );
-		windHeading = ( info.hasKey(:windHeading) ? info.get(:windHeading) : DEF_WINDHEADING );
-		windSpeed = ( info.hasKey(:windSpeed) ? info.get(:windSpeed) : DEF_WINDSPEED );
+		rWeight = ( info.hasKey(:rWeight) ? info.get(:rWeight) : rWeight );
+		rHeight = ( info.hasKey(:rHeight) ? info.get(:rHeight) : rHeight );
+		bWeight = ( info.hasKey(:bWeight) ? info.get(:bWeight) : bWeight );
+		CrEff = ( info.hasKey(:crr) ? info.get(:crr) : CrEff );
+		temp = ( info.hasKey(:temp) ? info.get(:temp) : temp );  								// deg C
+		windHeading = ( info.hasKey(:windHeading) ? info.get(:windHeading) : windHeading );   // radians -pi though pi
+		windSpeed = ( info.hasKey(:windSpeed) ? info.get(:windSpeed) : windSpeed );    		// metres per sec
+		draft = ( info.hasKey(:draftMult) ? info.get(:draftMult) : draft );
+		CdA = ( info.hasKey(:CdA) ? info.get(:CdA) : CdA );
 	}
 	
 	function initialize () {
-		var initData = { };
-		Sys.println(initData.isEmpty());
-		setProps ( initData );
+
 	}
 	
 	function envelope ( value, minvalue, maxvalue, defaultval ) {
@@ -104,36 +109,68 @@ class VirtualPowerSensor extends Lang.Object {
 	}
 	
 	function calcPower () {
-	/*
-	    var adipos = Math.sqrt(rWeight/(rHeight*750));
-	 
-		W = cos( bearing - windHeading ) * windSpeed * 0.27777777777778;   // headwind factor
+	
+		var V_a = speed + Math.cos( bearing - windHeading ) * windSpeed;   // airspeed = speed + wind tangent component
+		var V_nor = Math.sin( bearing - windHeading ) * windSpeed;    // Wind normal component
+		var Yaw = Math.atan2( V_nor, V_a );
+		var Cda = 
+		var slopeangle, CrDyn, Ka, Frg, relWind, CwaRider; 
 		
 		if ( cadence > 0 ) {
+	
+	     	slopeangle = Math.atan(slope * 0.01);
+
+	        CrDyn = 0.1 * Math.cos(slopeangle);
+	        Frg = 9.81 * (bWeight + rWeight) * (CrEff * Math.cos(slopeangle) + Math.sin(slopeangle));
+	
+	        relWind = speed + headwind; // Wind speed against cyclist = cyclist speed + wind speed
+	
+	        if (CdA == 0) {  //estimate CdA
+	        		CwaRider = (1 + cadence * cCad) * afCd * adipos * (((rHeight - adipos) * afSin) + adipos);
+	        		CdA = CwaRider + CwaBike;
+	         }
 		
-		           T = p->temp;
-	                double Slope = atan(p->slope * .01);
-	                double V = p->kph * 0.27777777777778; // Cyclist speed m/s
-	                double CrDyn = 0.1 * cos(Slope);
-	
-	                double Ka;
-	                double Frg = 9.81 * (MBik + M) * (CrEff * cos(Slope) + sin(Slope));
-	
-	                double vw=V+W; // Wind speed against cyclist = cyclist speed + wind speed
-	
-	                if (CdA == 0) {
-	                    double CwaRider = (1 + cad * cCad) * afCd * adipos * (((hRider - adipos) * afSin) + adipos);
-	                    CdA = CwaRider + CwaBike;
-	                }
-		
-		   Ka = 176.5 * exp(p->alt * .0001253) * CdA * DraftM / (273 + T);
-	 	   watts = ( afCm * V * (Ka * (vw * vw) + Frg + V * CrDyn)) + (accel > 1 ? 1 : accel*V*M);
+			Ka = 176.5 * Math.pow(Math.E, altitude * 0.0001253) * CdA * draft / (273.0 + temp);
+		   
+			watts = ( afCm * speed * (Ka * (relWind * relWind) + Frg + speed * CrDyn)) + (accel > 1.0 ? 1.0 : accel*speed*rWeight);
 	 	   
 		} else {
-			watts = 0.0;
-			
+			watts = 0.0;	
 		}
-		*/
-		return 100.0;	
+		
+		return watts;	
     }
+	
+/*	function calcPower () {
+	
+	    var adipos = Math.sqrt(rWeight/(rHeight*750.0));
+		var headwind = Math.cos( bearing - windHeading ) * windSpeed;   // headwind factor convert to m/s
+		var slopeangle, CrDyn, Ka, Frg, relWind, CwaRider; 
+		
+		if ( cadence > 0 ) {
+	
+	     	slopeangle = Math.atan(slope * 0.01);
+
+	        CrDyn = 0.1 * Math.cos(slopeangle);
+	        Frg = 9.81 * (bWeight + rWeight) * (CrEff * Math.cos(slopeangle) + Math.sin(slopeangle));
+	
+	        relWind = speed + headwind; // Wind speed against cyclist = cyclist speed + wind speed
+	
+	        if (CdA == 0) {  //estimate CdA
+	        		CwaRider = (1 + cadence * cCad) * afCd * adipos * (((rHeight - adipos) * afSin) + adipos);
+	        		CdA = CwaRider + CwaBike;
+	         }
+		
+			Ka = 176.5 * Math.pow(Math.E, altitude * 0.0001253) * CdA * draft / (273.0 + temp);
+		   
+			watts = ( afCm * speed * (Ka * (relWind * relWind) + Frg + speed * CrDyn)) + (accel > 1.0 ? 1.0 : accel*speed*rWeight);
+	 	   
+		} else {
+			watts = 0.0;	
+		}
+		
+		return watts;	
+    }
+ */   
+ 
 }  
