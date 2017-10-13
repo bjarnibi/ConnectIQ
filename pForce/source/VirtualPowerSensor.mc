@@ -109,30 +109,24 @@ class VirtualPowerSensor extends Lang.Object {
 	}
 	
 	function calcPower () {
-	
+
+		if ( cadence > 0 ) {
+			
 		var V_a = speed + Math.cos( bearing - windHeading ) * windSpeed;   // airspeed = speed + wind tangent component
 		var V_nor = Math.sin( bearing - windHeading ) * windSpeed;    // Wind normal component
 		var Yaw = Math.atan2( V_nor, V_a );
-		var Cda = 
-		var slopeangle, CrDyn, Ka, Frg, relWind, CwaRider; 
-		
-		if ( cadence > 0 ) {
-	
-	     	slopeangle = Math.atan(slope * 0.01);
-
-	        CrDyn = 0.1 * Math.cos(slopeangle);
-	        Frg = 9.81 * (bWeight + rWeight) * (CrEff * Math.cos(slopeangle) + Math.sin(slopeangle));
-	
-	        relWind = speed + headwind; // Wind speed against cyclist = cyclist speed + wind speed
-	
-	        if (CdA == 0) {  //estimate CdA
-	        		CwaRider = (1 + cadence * cCad) * afCd * adipos * (((rHeight - adipos) * afSin) + adipos);
-	        		CdA = CwaRider + CwaBike;
-	         }
-		
-			Ka = 176.5 * Math.pow(Math.E, altitude * 0.0001253) * CdA * draft / (273.0 + temp);
-		   
-			watts = ( afCm * speed * (Ka * (relWind * relWind) + Frg + speed * CrDyn)) + (accel > 1.0 ? 1.0 : accel*speed*rWeight);
+		var A = 0.0276 * Math.pow(rHeight, 0.725) * Math.pow(rWeight, 0.425) + 0.1647;
+		var Cda = 0.88 * A;
+		var P = 101325 * Math.pow(Math.E, -9.81*0.0289655*altitude/(8.31432*(273.15+temp)));
+		var rho = P / (287.05*(273.15+temp));
+		var P_at = Math.pow( V_a, 2) * speed * 0.5 * rho * ( CdA + 0.0044 );
+	    var 	slopeangle = Math.atan(slope * 0.01);
+	    var P_rr = speed * Math.cos( Math.atan (slopeangle)) * CrEff * ( rWeight + bWeight ) * 9.81;
+	    var P_wb = speed * ( 91 + 8.7 * speed) * 0.001;
+	    var P_pe = speed * ( rWeight + bWeight ) * 9.81 + Math.sin(Math.atan(slopeangle));
+	    var P_ke = 0.5 * ((rWeight + bWeight) + 0.14/0.311)*1.0;  // TODO (V_f**"-V_i**2)/dT
+	    
+	    	watts = (P_at + P_rr + P_wb + P_pe + P_ke)/0.976;
 	 	   
 		} else {
 			watts = 0.0;	
