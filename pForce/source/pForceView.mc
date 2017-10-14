@@ -22,33 +22,33 @@ const		GPS_GOOD = 4;			//The Location was calculated with a good GPS fix. A 3-D 
 
 class pForceView extends Ui.DataField {
 
-    hidden var mValue;
+    hidden var mValue, mValue2;
     
     hidden var mUserProfile 	 = null;
 	hidden var mTempSensor 	 = null;
 	hidden var mPower 		 = null;
 	
 	hidden var mMeasuredPower = 0.0;
-
+	
 	hidden var mDataQuality = Q_NONE;
 
 	function getProps() {
 		
 		// get user weight and height from the user profile   .heigth (cm) .weight (grams)		
 		mUserProfile 	= User.getProfile();
-		mTempSensor.setTemp(10);
+		mTempSensor.setTemp(25);
 		
 		// TODO Read props from app proerties
 		var props = {
-			:rWeight			=> mUserProfile.weight / 1000.0,  // weight in kg (grams in userprofile) 
-			:rHeight			=> mUserProfile.height / 100.0,	 // height in metres (cm in userprofile)
-			:bWeight			=> 7.5, 							// bikeweight in kg
+			:rWeight			=> 77.0, //mUserProfile.weight / 1000.0,  // weight in kg (grams in userprofile) 
+			:rHeight			=> 1.92, //mUserProfile.height / 100.0,	 // height in metres (cm in userprofile)
+			:bWeight			=> 8.0, 							// bikeweight in kg
 			:crr				=> 0.0031,
-			:CdA				=> 1.0,							// Effective fronal area m2
+			//:CdA				=> 1.0,							// Effective fronal area m2
 			:draftMult		=> 1.0,
-			:temp			=> mTempSensor.currentTemp(),
-			:windHeading		=> 0.0,
-			:windSpeed		=> 0.0
+			:temp			=> 8.0, //mTempSensor.currentTemp(),
+			:windHeading		=> -50.0 * Math.PI / 180.0,
+			:windSpeed		=> 6.0
 		};
 		
 		mPower.setProps ( props );		
@@ -75,13 +75,23 @@ class pForceView extends Ui.DataField {
     
     hidden function dataQuality ( locationAccuracy, pointQuality ) {
     
-    		Sys.println (Lang.format("Loc acc $1$  point qual $2$ \n", [locationAccuracy, pointQuality]) );
+    		//Sys.println (Lang.format("Loc acc $1$  point qual $2$ \n", [locationAccuracy, pointQuality]) );
     		mDataQuality = locationAccuracy + pointQuality;
     	}
     
+    var lastTime = 0;
+    var totalDistance = 0.0;
+    
     function correctData (info) {
+ 
+ 		if ( info has :elapsedTime && info.elapsedTime != null ) { 
+ 			info.elapsedDistance = totalDistance + (info.elapsedTime-lastTime).toFloat()/1000.0*info.currentSpeed; 
+ 			lastTime = info.elapsedTime; 
+ 			totalDistance = info.elapsedDistance;
+ 		}
     		if ( info has :currentCadence && info.currentCadence != null ) { info.currentCadence /= 2; }  // simulator bug reports 2x cadence
    		if ( info has :currentHeading && info.currentHeading != null ) { info.currentHeading = 1.57079633; }  // simulator bug no heading reported
+   		
    	}
     
     function compute(info) {
@@ -100,7 +110,7 @@ class pForceView extends Ui.DataField {
 */  
         var dataQuality = 0;
         
-        correctData ( info );   // correct data for simulator bugs 
+        //correctData ( info );   // correct data for simulator bugs 
         
         	if (info has :elapsedTime ) {   	dataQuality += addKey ( datapoint, :timestamp, info.elapsedTime ); 	}
         	if (info has :altitude ) {   	dataQuality += addKey ( datapoint, :altitude, info.altitude ); 	}
@@ -115,13 +125,13 @@ class pForceView extends Ui.DataField {
 		mDataQuality = 
 			dataQuality ( (info has :currentLocationAccuracy && info.currentLocationAccuracy != null ? info.currentLocationAccuracy : GPS_NOT_AVAILABLE), dataQuality );
 
-		printInfo ( datapoint );
+		//printInfo ( datapoint );
 		
 		mPower.setData ( datapoint );
 		
 		mMeasuredPower = (info has :currentPower &&  info.currentPower != null ? info.currentPower : -1.0);
 		mValue = mPower.calcPower();
-	        	        	        				
+		mValue2 = mPower.calcPower2();	        	        	        				
     }
 
     // Set your layout here. Anytime the size of obscurity of
@@ -171,7 +181,7 @@ class pForceView extends Ui.DataField {
         } else {
             value.setColor(Gfx.COLOR_BLACK);
         }
-        value.setText(mValue.format("%d") + " | " + mMeasuredPower.format("%d"));
+        value.setText(mValue.format("%d") + " | " + mMeasuredPower.format("%d") + " | " + mValue2.format("%d") );
 
         // Call parent's onUpdate(dc) to redraw the layout
         View.onUpdate(dc);
