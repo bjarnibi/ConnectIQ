@@ -13,8 +13,8 @@ const DEF_CADENCE		= 85.0;
 const DEF_DRAFT 			= 1.0;
 const DEF_CDA			= 0.0;
 
-const MIN_SLOPE			= -20.0;
-const MAX_SLOPE			= 20.0;
+const MIN_SLOPE			= -0.2;
+const MAX_SLOPE			= 0.2;
 
 class VirtualPowerSensor extends Lang.Object {
 
@@ -85,8 +85,8 @@ class VirtualPowerSensor extends Lang.Object {
 
 	}
 	
-	function envelope ( value, minvalue, maxvalue, defaultval ) {
-		return ( value > minvalue && value < maxvalue ? value : defaultval );
+	function envelope ( value, minvalue, maxvalue ) {
+		return ( value > minvalue ? (value < maxvalue ? value : maxvalue ) : minvalue );
 	}
 	
 	var V2_i = 0.0;
@@ -118,12 +118,15 @@ class VirtualPowerSensor extends Lang.Object {
 		
 		cadence			= ( info.hasKey(:cadence) ? info.get(:cadence) : cadence );
 	
-		if ( info.hasKey(:altitude) && info.hasKey(:distance) ) {
-			slope = envelope( ( deltaDistance > 0.0 ? deltaAltitude / deltaDistance * 100.0 : slope), MIN_SLOPE, MAX_SLOPE, slope);
+		if (info.hasKey(:slope) ) {  // if slope computed already we'll use that value
+			slope = envelope( info.get(:slope), MIN_SLOPE, MAX_SLOPE);
+	    } else if ( info.hasKey(:altitude) && info.hasKey(:distance) ) {
+			slope = envelope( ( deltaDistance > 0.0 ? deltaAltitude / deltaDistance : slope), MIN_SLOPE, MAX_SLOPE);
 		}
 	}
 	
 	function calcPower () {
+
 
 		if ( cadence > 0 ) {
 			
@@ -137,33 +140,34 @@ class VirtualPowerSensor extends Lang.Object {
 		
 		var P_at = Math.pow( V_a, 2) * speed * 0.5 * rho * ( CdA + 0.0044 );
 	    
-	    var 	slopeangle = Math.atan(slope * 0.01);
-	    var P_rr = speed * Math.cos( Math.atan (slopeangle)) * CrEff * ( rWeight + bWeight ) * 9.81;
+	    //var 	slopeangle = Math.atan(slope);
+	    var P_rr = speed * Math.cos( Math.atan (slope)) * CrEff * ( rWeight + bWeight ) * 9.81;
 	    var P_wb = speed * ( 91 + 8.7 * speed) * 0.001;
-	    var P_pe = max ( 0.0, speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slopeangle)) );
+	    var P_pe = max ( 0.0, speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope)) );
 	    var P_ke = max ( 0.0, 0.5 * ((rWeight + bWeight) + 0.14/0.311)*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0) );   
 	    
 	    	watts = (P_at + P_rr + P_wb + P_pe + P_ke)/0.976;
 
-	 /*	Sys.println("A " + A.format("%f")); 
-	 	Sys.println("CdA " + CdA.format("%f")); 
-	 	Sys.println("rho " + rho.format("%f")); 
-	 	Sys.println("P " + P.format("%f")); 
-	 	Sys.println("V_a " + V_a.format("%f")); 
+	 	Logger.logData("A", A); 
+	 	Logger.logData("CdA", CdA); 
+	 	Logger.logData("rho", rho); 
+	 	Logger.logData("P", P); 
+	 	Logger.logData("V_a", V_a); 
+	 	Logger.logData("slope", slope); 
 	 	
+	 	Logger.logData("P_at", P_at);   
+	 	Logger.logData("P_rr", P_rr);   
+	 	Logger.logData("P_wb", P_wb);   
+	 	Logger.logData("P_pe", P_pe);   
+	 	Logger.logData("P_ke", P_ke);   	 	  
 	 	
-	 	Sys.println("slope " + slope.format("%f")); 
-	 	
-	 	Sys.println("P_at " + P_at.format("%f"));   
-	 	Sys.println("P_rr " + P_rr.format("%f"));   
-	 	Sys.println("P_wb " + P_wb.format("%f"));   
-	 	Sys.println("P_pe " + P_pe.format("%f"));   
-	 	Sys.println("P_ke " + P_ke.format("%f"));   	 	  
-	 	*/ 
 		} else {
-			watts = 0.0;	
+
+	 		watts = 0.0;	
 		}
-		
+
+		Logger.logData("watts", watts);
+		Logger.endLine();   			
 		return watts;	
     }
 	
@@ -171,11 +175,11 @@ class VirtualPowerSensor extends Lang.Object {
 	
 	    var adipos = Math.sqrt(rWeight/(rHeight*750.0));
 		var headwind = Math.cos( bearing - windHeading ) * windSpeed;   // headwind factor convert to m/s
-		var slopeangle, CrDyn, Ka, Frg, relWind, CwaRider; 
+		var slopeangle,CrDyn, Ka, Frg, relWind, CwaRider; 
 		
 		if ( cadence > 0 ) {
 	
-	     	slopeangle = Math.atan(slope * 0.01);
+	     	slopeangle = Math.atan(slope);
 
 	        CrDyn = 0.1 * Math.cos(slopeangle);
 	        Frg = 9.81 * (bWeight + rWeight) * (CrEff * Math.cos(slopeangle) + Math.sin(slopeangle));

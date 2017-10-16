@@ -28,6 +28,11 @@ class pForceView extends Ui.DataField {
 	hidden var mTempSensor 	 = null;
 	hidden var mPower 		 = null;
 	
+	hidden var mAltitude = null;
+    hidden var mDistance = null;
+    hidden var mGrade = null;
+    hidden var mAvgInterval = 5;
+	
 	hidden var mMeasuredPower = 0.0;
 	
 	hidden var mDataQuality = Q_NONE;
@@ -37,6 +42,7 @@ class pForceView extends Ui.DataField {
 		// get user weight and height from the user profile   .heigth (cm) .weight (grams)		
 		mUserProfile 	= User.getProfile();
 		mTempSensor.setTemp(25);
+		mAvgInterval = 5;
 		
 		// TODO Read props from app proerties
 		var props = {
@@ -47,8 +53,8 @@ class pForceView extends Ui.DataField {
 			//:CdA				=> 1.0,							// Effective fronal area m2
 			:draftMult		=> 1.0,
 			:temp			=> 8.0, //mTempSensor.currentTemp(),
-			:windHeading		=> -50.0 * Math.PI / 180.0,
-			:windSpeed		=> 6.0
+			:windHeading		=> -30.0 * Math.PI / 180.0,
+			:windSpeed		=> 7.0
 		};
 		
 		mPower.setProps ( props );		
@@ -59,6 +65,9 @@ class pForceView extends Ui.DataField {
         DataField.initialize();        
         	mTempSensor 		= new TemperatureSensor( false );	
 		mPower 			= new VirtualPowerSensor();
+		mDistance 		= new RollingArray(15);
+    		mAltitude 		= new RollingArray(15);
+    		mGrade 			= new RollingArray(5);
 		  		
         getProps();
         
@@ -79,8 +88,10 @@ class pForceView extends Ui.DataField {
     		mDataQuality = locationAccuracy + pointQuality;
     	}
     
+    // TEMP DEBUG
     var lastTime = 0;
     var totalDistance = 0.0;
+    var lastLocation = null;
     
     function correctData (info) {
  
@@ -90,9 +101,22 @@ class pForceView extends Ui.DataField {
  			totalDistance = info.elapsedDistance;
  		}
     		if ( info has :currentCadence && info.currentCadence != null ) { info.currentCadence /= 2; }  // simulator bug reports 2x cadence
-   		if ( info has :currentHeading && info.currentHeading != null ) { info.currentHeading = 1.57079633; }  // simulator bug no heading reported
+    		
+    		if (info has :currentLocation && info.currentLocation != null ) {		// simulator bug no heading reported compute from lat long
+    			var location = info.currentLocation.toRadians();
+    			if ( lastLocation != null ) {
+    				var y = Math.sin(location[1]-lastLocation[1]) * Math.cos(location[0]);
+				var x = Math.cos(lastLocation[0])*Math.sin(location[0]) -
+        					Math.sin(lastLocation[0])*Math.cos(location[0])*Math.cos(location[1]-lastLocation[1]);
+				var brng = Math.atan2(y, x);
+			   if ( info has :currentHeading && info.currentHeading != null ) { info.currentHeading = brng; }  
+    			}
+    			
+    			lastLocation = location;
+ 		}
    		
-   	}
+   	}   
+    // TEMP DEBUG
     
     function compute(info) {
  
@@ -103,6 +127,7 @@ class pForceView extends Ui.DataField {
 			:distance		=> 0,
 			:altitude		=> 0,
 			:cadence			=> 0, 
+			:slope			=> 0,
 
 			:heartrate		=> 0,
 			:power			=> 0
@@ -110,8 +135,26 @@ class pForceView extends Ui.DataField {
 */  
         var dataQuality = 0;
         
-        //correctData ( info );   // correct data for simulator bugs 
-        
+        correctData ( info );   // correct data for simulator bugs 
+
+		if( info.altitude != null && info.elapsedDistance != null ) {
+		
+			mAltitude.set( info.altitude );
+			mDistance.set ( info.elapsedDistance );
+			
+        		var noData = mAltitude.length() < mAvgInterval + 2; // wait for intial data to enable averaging 		
+        	
+    			if ( !noData && (info.elapsedDistance - mDistance.getItem(-mAvgInterval)).abs() > 0.01) {
+	    		   	
+	    			mGrade.set((info.altitude-mAltitude.getItem(-mAvgInterval))/(info.elapsedDistance-mDistance.getItem(-mAvgInterval)));	
+		        addKey ( datapoint, :slope, mGrade.average() );
+				
+        		} else {
+        			addKey ( datapoint, :slope, 0.0 );
+        		}
+
+ 	   }
+                   
         	if (info has :elapsedTime ) {   	dataQuality += addKey ( datapoint, :timestamp, info.elapsedTime ); 	}
         	if (info has :altitude ) {   	dataQuality += addKey ( datapoint, :altitude, info.altitude ); 	}
         	if (info has :currentSpeed ) {   dataQuality += addKey ( datapoint, :speed, info.currentSpeed ); 	}
@@ -125,7 +168,7 @@ class pForceView extends Ui.DataField {
 		mDataQuality = 
 			dataQuality ( (info has :currentLocationAccuracy && info.currentLocationAccuracy != null ? info.currentLocationAccuracy : GPS_NOT_AVAILABLE), dataQuality );
 
-		//printInfo ( datapoint );
+		printInfo ( datapoint );
 		
 		mPower.setData ( datapoint );
 		
@@ -134,8 +177,6 @@ class pForceView extends Ui.DataField {
 		mValue2 = mPower.calcPower2();	        	        	        				
     }
 
-    // Set your layout here. Anytime the size of obscurity of
-    // the draw context is changed this will be called.
     function onLayout(dc) {
         var obscurityFlags = DataField.getObscurityFlags();
 
@@ -188,17 +229,16 @@ class pForceView extends Ui.DataField {
     }
 
     function printInfo ( info ) {
-    		Sys.print("[");
-        if (info.hasKey(:timestamp) ) {   	Sys.print( " :timestamp=>" + info.get (:timestamp).format("%d")); 	}
-        	if (info.hasKey(:altitude )) {   	Sys.print( " :altitude=> " + info.get (:altitude).format("%f") ); 	}
-        	if (info.hasKey(:speed )) {   Sys.print( " :speed=>" + info.get (:speed).format("%f"));	}
-        	if (info.hasKey(:bearing )) {   Sys.print( " :bearing=>" + info.get (:bearing).format("%f"));	}
-        	if (info.hasKey(:distance )) {   Sys.print( " :distance=>" + info.get (:distance).format("%f")); 	}
-        	if (info.hasKey(:cadence )) {   Sys.print( " :cadence=>" + info.get (:cadence).format("%d")); 	}
+    		Logger.startLine();
+        if (info.hasKey(:timestamp) ) {   	Logger.logData(":timestamp", info.get (:timestamp)); 	}
+        	if (info.hasKey(:altitude )) {   	Logger.logData( " :altitude",info.get (:altitude) ); 	}
+        	if (info.hasKey(:speed )) {   Logger.logData( " :speed", info.get (:speed));	}
+        	if (info.hasKey(:bearing )) {   Logger.logData( " :bearing", info.get (:bearing));	}
+        	if (info.hasKey(:distance )) {   Logger.logData( " :distance", info.get (:distance)); 	}
+        	if (info.hasKey(:cadence )) {   Logger.logData( " :cadence", info.get (:cadence)); 	}
 
-        	if (info.hasKey(:heartrate )) {   Sys.print( ":heartrate=>" + info.get (:heartrate).format("%d"));	}
-        	if (info.hasKey(:power )) {   Sys.print( ":power=>" + info.get (:power).format("%d")); 	}
-        	Sys.println("]");
+        	if (info.hasKey(:heartrate )) {   Logger.logData( ":heartrate", info.get (:heartrate));	}
+        	if (info.hasKey(:power )) {   Logger.logData( ":power",info.get (:power)); 	}
     }
     
 
