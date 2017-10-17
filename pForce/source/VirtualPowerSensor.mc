@@ -123,16 +123,21 @@ class VirtualPowerSensor extends Lang.Object {
 	    } else if ( info.hasKey(:altitude) && info.hasKey(:distance) ) {
 			slope = envelope( ( deltaDistance > 0.0 ? deltaAltitude / deltaDistance : slope), MIN_SLOPE, MAX_SLOPE);
 		}
+
 	}
 	
 	function calcPower () {
 
 
 		if ( cadence > 0 ) {
-			
-		var V_a = speed + Math.cos( bearing - windHeading ) * windSpeed;   // airspeed = speed + wind tangent component
+
+		var V_tan = Math.cos( bearing - windHeading ) * windSpeed;
 		var V_nor = Math.sin( bearing - windHeading ) * windSpeed;    // Wind normal component
+		var V_a = speed + V_tan;   // airspeed = speed + wind tangent component
 		var Yaw = Math.atan2( V_nor, V_a );
+		
+		// Sys.println("V_tan " + V_tan.format("%f") + " V_nor " + V_nor.format("%f") + " Yaw " + Yaw.format("%f") );
+		
 		var A = 0.0276 * Math.pow(rHeight, 0.725) * Math.pow(rWeight, 0.425) + 0.1647;
 		var CdA = 0.88 * A;
 		var P = 101325.0 * Math.pow(Math.E, -9.81*0.0289655*altitude/(8.31432*(273.15+temp)));
@@ -140,18 +145,22 @@ class VirtualPowerSensor extends Lang.Object {
 		
 		var P_at = Math.pow( V_a, 2) * speed * 0.5 * rho * ( CdA + 0.0044 );
 	    
-	    //var 	slopeangle = Math.atan(slope);
 	    var P_rr = speed * Math.cos( Math.atan (slope)) * CrEff * ( rWeight + bWeight ) * 9.81;
 	    var P_wb = speed * ( 91 + 8.7 * speed) * 0.001;
-	    var P_pe = max ( 0.0, speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope)) );
-	    var P_ke = max ( 0.0, 0.5 * ((rWeight + bWeight) + 0.14/0.311)*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0) );   
+//	    var P_pe = max ( 0.0, speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope)) );
+//	    var P_ke = max ( 0.0, 0.5 * ((rWeight + bWeight) + 0.14/0.311)*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0) );   
+	    var P_pe = speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope));
+	    var P_ke = 0.5 * ((rWeight + bWeight) + 0.14/0.311)*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0);   
 	    
-	    	watts = (P_at + P_rr + P_wb + P_pe + P_ke)/0.976;
+	    	watts = max ( 0.0, (P_at + P_rr + P_wb + P_pe + P_ke)/0.976 );
 
-	 	Logger.logData("A", A); 
+	 	//Logger.logData("A", A); 
 	 	Logger.logData("CdA", CdA); 
-	 	Logger.logData("rho", rho); 
-	 	Logger.logData("P", P); 
+	 	//Logger.logData("rho", rho); 
+	 	//Logger.logData("P", P); 
+	 	Logger.logData("V_tan", V_tan); 
+	   	Logger.logData("V_nor", V_nor); 
+	 	Logger.logData("Yaw", Yaw); 
 	 	Logger.logData("V_a", V_a); 
 	 	Logger.logData("slope", slope); 
 	 	

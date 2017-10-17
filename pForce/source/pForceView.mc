@@ -54,7 +54,7 @@ class pForceView extends Ui.DataField {
 			:draftMult		=> 1.0,
 			:temp			=> 8.0, //mTempSensor.currentTemp(),
 			:windHeading		=> -30.0 * Math.PI / 180.0,
-			:windSpeed		=> 7.0
+			:windSpeed		=> 5.0
 		};
 		
 		mPower.setProps ( props );		
@@ -91,7 +91,8 @@ class pForceView extends Ui.DataField {
     // TEMP DEBUG
     var lastTime = 0;
     var totalDistance = 0.0;
-    var lastLocation = null;
+    var lastLocation = null; 
+    var heading = new RollingArray(5);
     
     function correctData (info) {
  
@@ -109,7 +110,8 @@ class pForceView extends Ui.DataField {
 				var x = Math.cos(lastLocation[0])*Math.sin(location[0]) -
         					Math.sin(lastLocation[0])*Math.cos(location[0])*Math.cos(location[1]-lastLocation[1]);
 				var brng = Math.atan2(y, x);
-			   if ( info has :currentHeading && info.currentHeading != null ) { info.currentHeading = brng; }  
+			   heading.set(brng);
+			   if ( info has :currentHeading && info.currentHeading != null ) { info.currentHeading = heading.average(); }  
     			}
     			
     			lastLocation = location;
@@ -137,7 +139,7 @@ class pForceView extends Ui.DataField {
         
         correctData ( info );   // correct data for simulator bugs 
 
-		if( info.altitude != null && info.elapsedDistance != null ) {
+		if( info.altitude != null && info.elapsedDistance != null && info.elapsedDistance > 0.0 ) {
 		
 			mAltitude.set( info.altitude );
 			mDistance.set ( info.elapsedDistance );
@@ -155,6 +157,12 @@ class pForceView extends Ui.DataField {
 
  	   }
                    
+    //if (info has :currentLocation && info.currentLocation != null ) {		// simulator bug no heading reported compute from lat long
+    	//	var location = info.currentLocation.toDegrees();
+    	//		addKey ( datapoint, :latitude, location[0] );
+    //			addKey ( datapoint, :longitude, location[1] ); 
+    //		}  			
+    			
         	if (info has :elapsedTime ) {   	dataQuality += addKey ( datapoint, :timestamp, info.elapsedTime ); 	}
         	if (info has :altitude ) {   	dataQuality += addKey ( datapoint, :altitude, info.altitude ); 	}
         	if (info has :currentSpeed ) {   dataQuality += addKey ( datapoint, :speed, info.currentSpeed ); 	}
@@ -237,8 +245,10 @@ class pForceView extends Ui.DataField {
         	if (info.hasKey(:distance )) {   Logger.logData( " :distance", info.get (:distance)); 	}
         	if (info.hasKey(:cadence )) {   Logger.logData( " :cadence", info.get (:cadence)); 	}
 
-        	if (info.hasKey(:heartrate )) {   Logger.logData( ":heartrate", info.get (:heartrate));	}
+        //	if (info.hasKey(:heartrate )) {   Logger.logData( ":heartrate", info.get (:heartrate));	}
         	if (info.hasKey(:power )) {   Logger.logData( ":power",info.get (:power)); 	}
+        //	if (info.hasKey(:latitude )) { 	Logger.logData("latitude", info.get(:latitude)); }
+		//if (info.hasKey(:longitude )) { Logger.logData("longitude", info.get(:longitude)); }
     }
     
 
