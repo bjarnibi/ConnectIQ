@@ -60,6 +60,8 @@ class VirtualPowerSensor extends Lang.Object {
 	var deltaAltitude	= 0.0;	// alt diff since last update
 	var slope			= 0.0;	// grade slope in percentage (-20% - 20%)
 	var cadence			= DEF_CADENCE;
+	
+	var mWatts = null;
 
 	function min ( a, b ) {
 		return ( a < b ? a : b);
@@ -78,11 +80,11 @@ class VirtualPowerSensor extends Lang.Object {
 		windHeading = ( info.hasKey(:windHeading) ? info.get(:windHeading) : windHeading );   // radians -pi though pi
 		windSpeed = ( info.hasKey(:windSpeed) ? info.get(:windSpeed) : windSpeed );    		// metres per sec
 		draft = ( info.hasKey(:draftMult) ? info.get(:draftMult) : draft );
-		CdA = ( info.hasKey(:CdA) ? info.get(:CdA) : CdA );
+		//CdA = ( info.hasKey(:CdA) ? info.get(:CdA) : CdA );
 	}
 	
 	function initialize () {
-
+		mWatts = new RollingArray(5);
 	}
 	
 	function envelope ( value, minvalue, maxvalue ) {
@@ -136,8 +138,6 @@ class VirtualPowerSensor extends Lang.Object {
 		var V_a = speed + V_tan;   // airspeed = speed + wind tangent component
 		var Yaw = Math.atan2( V_nor, V_a );
 		
-		// Sys.println("V_tan " + V_tan.format("%f") + " V_nor " + V_nor.format("%f") + " Yaw " + Yaw.format("%f") );
-		
 		var A = 0.0276 * Math.pow(rHeight, 0.725) * Math.pow(rWeight, 0.425) + 0.1647;
 		var CdA = 0.88 * A;
 		var P = 101325.0 * Math.pow(Math.E, -9.81*0.0289655*altitude/(8.31432*(273.15+temp)));
@@ -146,11 +146,13 @@ class VirtualPowerSensor extends Lang.Object {
 		var P_at = Math.pow( V_a, 2) * speed * 0.5 * rho * ( CdA + 0.0044 );
 	    
 	    var P_rr = speed * Math.cos( Math.atan (slope)) * CrEff * ( rWeight + bWeight ) * 9.81;
-	    var P_wb = speed * ( 91 + 8.7 * speed) * 0.001;
+	    var P_wb = speed * ( 91.0 + 8.7 * speed) / 1000.0;
 //	    var P_pe = max ( 0.0, speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope)) );
-//	    var P_ke = max ( 0.0, 0.5 * ((rWeight + bWeight) + 0.14/0.311)*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0) );   
+//	    var P_ke = max ( 0.0, 0.5 * ((rWeight + bWeight) + 0.14/0.336)*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0) );   
+
 	    var P_pe = speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope));
-	    var P_ke = 0.5 * ((rWeight + bWeight) + 0.14/0.311)*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0);   
+	    
+	    var P_ke = 0.5 * ((rWeight + bWeight) + 0.14/(0.336*0.336))*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0);   
 	    
 	    	watts = max ( 0.0, (P_at + P_rr + P_wb + P_pe + P_ke)/0.976 );
 
@@ -175,7 +177,12 @@ class VirtualPowerSensor extends Lang.Object {
 	 		watts = 0.0;	
 		}
 
+		mWatts.set( watts );
+		
+		watts = mWatts.average();
+		
 		Logger.logData("watts", watts);
+		Logger.logData("accel", accel);
 		Logger.endLine();   			
 		return watts;	
     }
@@ -195,10 +202,10 @@ class VirtualPowerSensor extends Lang.Object {
 	
 	        relWind = speed + headwind; // Wind speed against cyclist = cyclist speed + wind speed
 	
-	        if (CdA == 0) {  //estimate CdA
+	        //if (CdA == 0) {  //estimate CdA
 	        		CwaRider = (1 + cadence * cCad) * afCd * adipos * (((rHeight - adipos) * afSin) + adipos);
 	        		CdA = CwaRider + CwaBike;
-	         }
+	         //}
 		
 			Ka = 176.5 * Math.pow(Math.E, altitude * 0.0001253) * CdA * draft / (273.0 + temp);
 		   
@@ -208,7 +215,7 @@ class VirtualPowerSensor extends Lang.Object {
 			watts2 = 0.0;	
 		}
 		
-		return watts2;	
+		return max ( 0.0, watts2);	
     }
     
  
