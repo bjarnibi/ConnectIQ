@@ -1,6 +1,7 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.UserProfile as User;
+using Toybox.Application as App;
 using Toybox.System as Sys;
 using Toybox.Lang as Lang;
 
@@ -19,43 +20,85 @@ const		GPS_LAST_KNOWN = 1;		//The Location is based on the last known GPS fix.
 const		GPS_POOR = 2;			//The Location was calculated with a poor GPS fix. Only a 2-D GPS fix is available, likely due to a limited number of tracked satellites.
 const		GPS_USABLE = 3; 			//The Location was calculated with a usable GPS fix. A 3-D GPS fix is available, with marginal HDOP (horizontal dilution of precision)
 const		GPS_GOOD = 4;			//The Location was calculated with a good GPS fix. A 3-D GPS fix is available, with good-to-excellent HDOP (horizontal dilution of precision).      
+const MAX_POWER_ZONES = 7;
 
 class pForceView extends Ui.DataField {
 
     hidden var mValue, mValue2;
     
     hidden var mUserProfile 	 = null;
-	hidden var mTempSensor 	 = null;
 	hidden var mPower 		 = null;
+	
+	hidden var mPowerZones = [ 0, 162, 221, 265, 309, 354, 442, 9999 ];  
+	hidden var mCurrentZone = 1;
+	hidden var mFtpPower = 150.0;
+		
+	hidden var mPowerZoneColors = [
+		Gfx.COLOR_LT_GRAY,  // Z1 0 - 162
+		Gfx.COLOR_BLUE,  // z2
+		Gfx.COLOR_DK_GREEN,  // z3
+		Gfx.COLOR_YELLOW,  // z4
+		Gfx.COLOR_ORANGE,  // z5 
+		Gfx.COLOR_RED,   // z6
+		Gfx.COLOR_DK_RED ];  // z7 443+
 	
 	hidden var mAltitude = null;
     hidden var mDistance = null;
     hidden var mGrade = null;
     hidden var mAvgInterval = 3;
-	
 	hidden var mMeasuredPower = 0.0;
 	
 	hidden var mDataQuality = Q_NONE;
+	
+	function min ( a, b ) { return ( a < b ? a : b ); }
+	
+	function getKey (app, key, defaultValue) {
+		var val = app.getProperty(key);
+		if ( val == null ) { val = defaultValue; }
+		else if ( !(val instanceof Toybox.Lang.Number) ) { val = val.toNumber(); }
+		return val;
+	}
+	
+	hidden function powerZone ( power ) {
+    		for (var i=1; i<MAX_POWER_ZONES; i++) {
+			if ( power >= mPowerZones[i-1] && power < mPowerZones[i] ) {
+				return i;		
+		  	}	
+		}
+		return MAX_POWER_ZONES;
+	} 
 
 	function getProps() {
-		
+
+		var app = App.getApp();
+		var defaultPower = [0,56,76,91,106,121,151,700];
+		var perc;
+
 		// get user weight and height from the user profile   .heigth (cm) .weight (grams)		
 		mUserProfile 	= User.getProfile();
-		mTempSensor.setTemp(25);
-		mAvgInterval = 5;
 		
-		// TODO Read props from app proerties
+		mAvgInterval = 4;
+		
 		var props = {
-			:rWeight			=> 77.0, //mUserProfile.weight / 1000.0,  // weight in kg (grams in userprofile) 
-			:rHeight			=> 1.92, //mUserProfile.height / 100.0,	 // height in metres (cm in userprofile)
-			:bWeight			=> 8.0, 							// bikeweight in kg
+			:rWeight			=> getKey(app, "riderWeight_prop", 75.0).toFloat(), //mUserProfile.weight / 1000.0,  // weight in kg (grams in userprofile) 
+			:rHeight			=> getKey(app, "riderHeight_prop", 175).toFloat() / 100.0, //mUserProfile.height / 100.0,	 // height in metres (cm in userprofile)
+			:bWeight			=> getKey(app, "bikeHeight_prop", 8.0).toFloat(), 							// bikeweight in kg
 			:crr				=> 0.0031,
-			//:CdA				=> 1.0,							// Effective fronal area m2
 			:draftMult		=> 1.0,
-			:temp			=> 8.0, //mTempSensor.currentTemp(),
-			:windHeading		=> -30.0 * Math.PI / 180.0,
-			:windSpeed		=> 2.0
+			:temp			=> getKey(app, "temp_prop", 15.0), //mTempSensor.currentTemp(),
+			:windHeading		=> getKey(app, "windHeading_prop", 0).toFloat() * Math.PI / 180.0,
+			:windSpeed		=> getKey(app, "windSpeed_prop", 0.0).toFloat()
 		};
+		
+		mFtpPower = getKey(app, "ftpPower_prop", 150);
+
+		for ( var i=2; i<= MAX_POWER_ZONES; i++ ) {
+        		perc = getKey(app, "z"+i.toString()+"_prop", defaultPower[i-1]);         
+            mPowerZones[i-1] = perc * mFtpPower / 100;
+            if (mPowerZones[i-1] < mPowerZones[i-2]) {mPowerZones[i-1]=mPowerZones[i-2]+5;}
+        }        
+		
+		//Sys.println(props);
 		
 		mPower.setProps ( props );		
 	}
@@ -63,11 +106,10 @@ class pForceView extends Ui.DataField {
     function initialize() {
         
         DataField.initialize();        
-        	mTempSensor 		= new TemperatureSensor( false );	
 		mPower 			= new VirtualPowerSensor();
-		mDistance 		= new RollingArray(15);
-    		mAltitude 		= new RollingArray(15);
-    		mGrade 			= new RollingArray(5);
+		mDistance 		= new RollingArray(10);
+    		mAltitude 		= new RollingArray(10);
+    		mGrade 			= new RollingArray(3);
 		  		
         getProps();
         
@@ -90,7 +132,7 @@ class pForceView extends Ui.DataField {
     var lastTime = 0;
     var totalDistance = 0.0;
     var lastLocation = null; 
-    var heading = new RollingArray(5);
+    var heading = new RollingArray(3);
     
     function correctData (info) {
  
@@ -142,11 +184,11 @@ class pForceView extends Ui.DataField {
 			mAltitude.set( info.altitude );
 			mDistance.set ( info.elapsedDistance );
 			
-        		var noData = mAltitude.length() < mAvgInterval + 2; // wait for intial data to enable averaging 		
+        		var avg = min (mAltitude.length(), mAvgInterval); // wait for intial data to enable averaging 		
         	
-    			if ( !noData && (info.elapsedDistance - mDistance.getItem(-mAvgInterval)).abs() > 0.01) {
+    			if ( (info.elapsedDistance - mDistance.getItem(-avg)).abs() > 0.001) {
 	    		   	
-	    			mGrade.set((info.altitude-mAltitude.getItem(-mAvgInterval))/(info.elapsedDistance-mDistance.getItem(-mAvgInterval)));	
+	    			mGrade.set((info.altitude-mAltitude.getItem(-avg))/(info.elapsedDistance-mDistance.getItem(-avg)));	
 		        addKey ( datapoint, :slope, mGrade.average() );
 				
         		} else {
@@ -175,6 +217,8 @@ class pForceView extends Ui.DataField {
 		mMeasuredPower = (info has :currentPower &&  info.currentPower != null ? info.currentPower : 0.0);
 		
 		mValue = mPower.calcPower();
+		mCurrentZone = powerZone ( mValue );
+		
 		mValue2 = mPower.calcPower2();	        	        	        				
     }
 
@@ -223,6 +267,7 @@ class pForceView extends Ui.DataField {
         } else {
             value.setColor(Gfx.COLOR_BLACK);
         }
+       	value.setColor(mPowerZoneColors[mCurrentZone-1]);
         value.setText(mValue.format("%d") + " | " + mMeasuredPower.format("%d") + " | " + mValue2.format("%d") );
 
         // Call parent's onUpdate(dc) to redraw the layout

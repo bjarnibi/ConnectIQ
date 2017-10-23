@@ -11,7 +11,6 @@ const DEF_WINDHEADING	= 0.0;
 const DEF_WINDSPEED		= 0.0;
 const DEF_CADENCE		= 85.0;
 const DEF_DRAFT 			= 1.0;
-const DEF_CDA			= 0.0;
 
 const MIN_SLOPE			= -0.2;
 const MAX_SLOPE			= 0.2;
@@ -41,7 +40,6 @@ class VirtualPowerSensor extends Lang.Object {
 	var windSpeed		= DEF_WINDSPEED;  // km/s
     var CrEff 			= DEF_CREFF;  // crr CrV Coefficient of Rolling Resistnance
     var draft			= DEF_DRAFT;
-    var CdA				= DEF_CDA;
     
 	// dynamic parameters - updated every second 
 	var timestamp		= 0;		// milliseconds
@@ -60,8 +58,7 @@ class VirtualPowerSensor extends Lang.Object {
 	var deltaAltitude	= 0.0;	// alt diff since last update
 	var slope			= 0.0;	// grade slope in percentage (-20% - 20%)
 	var cadence			= DEF_CADENCE;
-	
-	var mWatts = null;
+
 
 	function min ( a, b ) {
 		return ( a < b ? a : b);
@@ -80,11 +77,10 @@ class VirtualPowerSensor extends Lang.Object {
 		windHeading = ( info.hasKey(:windHeading) ? info.get(:windHeading) : windHeading );   // radians -pi though pi
 		windSpeed = ( info.hasKey(:windSpeed) ? info.get(:windSpeed) : windSpeed );    		// metres per sec
 		draft = ( info.hasKey(:draftMult) ? info.get(:draftMult) : draft );
-		//CdA = ( info.hasKey(:CdA) ? info.get(:CdA) : CdA );
 	}
 	
 	function initialize () {
-		mWatts = new RollingArray(5);
+
 	}
 	
 	function envelope ( value, minvalue, maxvalue ) {
@@ -131,15 +127,16 @@ class VirtualPowerSensor extends Lang.Object {
 	function calcPower () {
 
 
-		if ( cadence > 0 ) {
+		if ( cadence > 10 ) {
 
 		var V_tan = Math.cos( bearing - windHeading ) * windSpeed;
 		var V_nor = Math.sin( bearing - windHeading ) * windSpeed;    // Wind normal component
 		var V_a = speed + V_tan;   // airspeed = speed + wind tangent component
 		var Yaw = Math.atan2( V_nor, V_a );
 		
+		
 		var A = 0.0276 * Math.pow(rHeight, 0.725) * Math.pow(rWeight, 0.425) + 0.1647;
-		var CdA = 0.88 * A;
+		var CdA = 0.88 * A * ( 1.0 - (2.0 * Yaw.abs() / Math.PI) ) ;
 		var P = 101325.0 * Math.pow(Math.E, -9.81*0.0289655*altitude/(8.31432*(273.15+temp)));
 		var rho = P / (287.05*(273.15+temp));
 		
@@ -147,14 +144,13 @@ class VirtualPowerSensor extends Lang.Object {
 	    
 	    var P_rr = speed * Math.cos( Math.atan (slope)) * CrEff * ( rWeight + bWeight ) * 9.81;
 	    var P_wb = speed * ( 91.0 + 8.7 * speed) / 1000.0;
-//	    var P_pe = max ( 0.0, speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope)) );
-//	    var P_ke = max ( 0.0, 0.5 * ((rWeight + bWeight) + 0.14/0.336)*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0) );   
+
 
 	    var P_pe = speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope));
 	    
 	    var P_ke = 0.5 * ((rWeight + bWeight) + 0.14/(0.336*0.336))*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0);   
 	    
-	    	watts = max ( 0.0, (P_at + P_rr + P_wb + P_pe + P_ke)/0.976 );
+	    	watts = max ( 0.0, (P_at + P_rr + P_wb + P_pe + P_ke)/0.976);
 
 	 	//Logger.logData("A", A); 
 	 	Logger.logData("CdA", CdA); 
@@ -162,7 +158,7 @@ class VirtualPowerSensor extends Lang.Object {
 	 	//Logger.logData("P", P); 
 	 	Logger.logData("V_tan", V_tan); 
 	   	Logger.logData("V_nor", V_nor); 
-	 	Logger.logData("Yaw", Yaw); 
+	 	Logger.logData("Yaw", Yaw * 180.0/Math.PI); 
 	 	Logger.logData("V_a", V_a); 
 	 	Logger.logData("slope", slope); 
 	 	
@@ -177,13 +173,10 @@ class VirtualPowerSensor extends Lang.Object {
 	 		watts = 0.0;	
 		}
 
-		mWatts.set( watts );
-		
-		watts = mWatts.average();
 		
 		Logger.logData("watts", watts);
 		Logger.logData("accel", accel);
-		Logger.endLine();   			
+		Logger.endLine();   		
 		return watts;	
     }
 	
@@ -191,7 +184,7 @@ class VirtualPowerSensor extends Lang.Object {
 	
 	    var adipos = Math.sqrt(rWeight/(rHeight*750.0));
 		var headwind = Math.cos( bearing - windHeading ) * windSpeed;   // headwind factor convert to m/s
-		var slopeangle,CrDyn, Ka, Frg, relWind, CwaRider; 
+		var slopeangle,CrDyn, CdA, Ka, Frg, relWind, CwaRider; 
 		
 		if ( cadence > 0 ) {
 	
