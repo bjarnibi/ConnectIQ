@@ -8,8 +8,7 @@
         <property id="temp_prop" type="number">8</property>
         <property id="windHeading_prop" type="number">90</property>
         <property id="windSpeed_prop" type="float">3.0</property>
-                
-        <property id="average_prop" type="number">3</property>                  
+                              
         <property id="ftpPower_prop" type="number">295</property>
         <property id="z2_prop" type="number">56</property>
         <property id="z3_prop" type="number">76</property>
@@ -28,7 +27,6 @@
        <string id="windHeading_title">Wind heading (0 - 359 Degrees)</string>       
        <string id="windSpeed_title">Wind speed (0 - 30 metres/sec)</string>    
                             
-       <string id="average_title">Power Averaging Period (1/3/5/10 sec)</string>
        <string id="ftpPower_title">FTP (watts)</string>
        <string id="z2_title">Zone 2 Lower Limit (0-200% of FTP)</string>
        <string id="z3_title">Zone 3 Lower Limit (0-200% of FTP)</string>
@@ -47,12 +45,7 @@
 
        <string id="zone_error">Zone value must be between 0-200% of FTP</string>
        <string id="ftp_error">FTP should be between 50-400 watts</string>   
-       
-       <string id="average_1s_title">1 sec (instant)</string> 
-       <string id="average_3s_title">3 sec</string>      
-       <string id="average_10s_title">10 sec</string>  
-       <string id="average_30s_title">30 sec</string>   
-       
+            
     </strings>
  
     <settings>
@@ -78,15 +71,6 @@
  
          <setting propertyKey="@Properties.windSpeed_prop" title="@Strings.windSpeed_title">
             <settingConfig type="numeric" required="true" min="0" max="30" errorMessage="@Strings.windSpeed_error"/>
-        </setting>
-          
-        <setting propertyKey="@Properties.average_prop" title="@Strings.average_title">
-            <settingConfig type="list" required="true">
-            		<listEntry value="1">@Strings.average_1s_title</listEntry>            	
-            		<listEntry value="3">@Strings.average_3s_title</listEntry>
-            		<listEntry value="10">@Strings.average_10s_title</listEntry>
-              	<listEntry value="30">@Strings.average_30s_title</listEntry>
-       		</settingConfig>
         </setting>
         
         <setting propertyKey="@Properties.ftpPower_prop" title="@Strings.ftpPower_title">

@@ -3,10 +3,10 @@ using Toybox.Math as Math;
 //using Toybox.System as Sys;
 
 const DEF_RWEIGHT		= 77.0;
-const DEF_RHEIGHT		= 1.92;
+const DEF_RHEIGHT		= 1.75;
 const DEF_BWEIGHT		= 7.5;
 const DEF_CREFF			= 0.0031;
-const DEF_TEMP			= 20.0;
+const DEF_TEMP			= 15.0;
 const DEF_WINDHEADING	= 0.0;
 const DEF_WINDSPEED		= 0.0;
 const DEF_CADENCE		= 85.0;
@@ -60,11 +60,11 @@ class VirtualPowerSensor extends Lang.Object {
 	var cadence			= DEF_CADENCE;
 
 
-	function min ( a, b ) {
+	hidden function min ( a, b ) {
 		return ( a < b ? a : b);
 	} 
 
-	function max ( a, b ) {
+	hidden function max ( a, b ) {
 		return ( a > b ? a : b);
 	} 
 
@@ -83,7 +83,7 @@ class VirtualPowerSensor extends Lang.Object {
 
 	}
 	
-	function envelope ( value, minvalue, maxvalue ) {
+	hidden function envelope ( value, minvalue, maxvalue ) {
 		return ( value > minvalue ? (value < maxvalue ? value : maxvalue ) : minvalue );
 	}
 	
@@ -178,8 +178,9 @@ class VirtualPowerSensor extends Lang.Object {
 		
 		return watts;	
     }
-	
-	function calcPower2 () {
+    
+	/*
+   function calcPower2 () {
 	
 	    var adipos = Math.sqrt(rWeight/(rHeight*750.0));
 		var headwind = Math.cos( bearing - windHeading ) * windSpeed;   // headwind factor convert to m/s
@@ -209,6 +210,8 @@ class VirtualPowerSensor extends Lang.Object {
 		
 		return max ( 0.0, watts2);	
     }
+    
+    */
     
  
 }  
