@@ -1,6 +1,6 @@
 using Toybox.Lang as Lang;
 using Toybox.Math as Math;
-using Toybox.System as Sys;
+//using Toybox.System as Sys;
 
 const DEF_RWEIGHT		= 77.0;
 const DEF_RHEIGHT		= 1.92;
@@ -129,54 +129,53 @@ class VirtualPowerSensor extends Lang.Object {
 
 		if ( cadence > 10 ) {
 
-		var V_tan = Math.cos( bearing - windHeading ) * windSpeed;
-		var V_nor = Math.sin( bearing - windHeading ) * windSpeed;    // Wind normal component
-		var V_a = speed + V_tan;   // airspeed = speed + wind tangent component
-		var Yaw = Math.atan2( V_nor, V_a );
-		
-		
-		var A = 0.0276 * Math.pow(rHeight, 0.725) * Math.pow(rWeight, 0.425) + 0.1647;
-		var CdA = 0.88 * A * ( 1.0 - (2.0 * Yaw.abs() / Math.PI) ) ;
-		var P = 101325.0 * Math.pow(Math.E, -9.81*0.0289655*altitude/(8.31432*(273.15+temp)));
-		var rho = P / (287.05*(273.15+temp));
-		
-		var P_at = Math.pow( V_a, 2) * speed * 0.5 * rho * ( CdA + 0.0044 );
-	    
-	    var P_rr = speed * Math.cos( Math.atan (slope)) * CrEff * ( rWeight + bWeight ) * 9.81;
-	    var P_wb = speed * ( 91.0 + 8.7 * speed) / 1000.0;
-
-
-	    var P_pe = speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope));
-	    
-	    var P_ke = 0.5 * ((rWeight + bWeight) + 0.14/(0.336*0.336))*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0);   
-	    
-	    	watts = max ( 0.0, (P_at + P_rr + P_wb + P_pe + P_ke)/0.976);
-
-	 	//Logger.logData("A", A); 
-	 	Logger.logData("CdA", CdA); 
-	 	//Logger.logData("rho", rho); 
-	 	//Logger.logData("P", P); 
-	 	Logger.logData("V_tan", V_tan); 
-	   	Logger.logData("V_nor", V_nor); 
-	 	Logger.logData("Yaw", Yaw * 180.0/Math.PI); 
-	 	Logger.logData("V_a", V_a); 
-	 	Logger.logData("slope", slope); 
-	 	
-	 	Logger.logData("P_at", P_at);   
-	 	Logger.logData("P_rr", P_rr);   
-	 	Logger.logData("P_wb", P_wb);   
-	 	Logger.logData("P_pe", P_pe);   
-	 	Logger.logData("P_ke", P_ke);   	 	  
+			var V_tan = Math.cos( bearing - windHeading ) * windSpeed;
+			var V_nor = Math.sin( bearing - windHeading ) * windSpeed;    // Wind normal component
+			var V_a = speed + V_tan;   // airspeed = speed + wind tangent component
+			var Yaw = Math.atan2( V_nor, V_a );
+			
+			
+			var A = 0.0276 * Math.pow(rHeight, 0.725) * Math.pow(rWeight, 0.425) + 0.1647;
+			var CdA = 0.88 * A * ( 1.0 - (2.0 * Yaw.abs() / Math.PI) ) ;
+			var P = 101325.0 * Math.pow(Math.E, -9.81*0.0289655*altitude/(8.31432*(273.15+temp)));
+			var rho = P / (287.05*(273.15+temp));
+			
+			var P_at = Math.pow( V_a, 2) * speed * 0.5 * rho * ( CdA + 0.0044 );
+		    
+		    var P_rr = speed * Math.cos( Math.atan (slope)) * CrEff * ( rWeight + bWeight ) * 9.81;
+		    var P_wb = speed * ( 91.0 + 8.7 * speed) / 1000.0;
+	
+	
+		    var P_pe = speed * ( rWeight + bWeight ) * 9.81 * Math.sin(Math.atan(slope));
+		    
+		    var P_ke = 0.5 * ((rWeight + bWeight) + 0.14/(0.336*0.336))*(deltaTime > 0 ? (V2_f - V2_i)/deltaTime : 0.0);   
+		    
+		    	watts = max ( 0.0, (P_at + P_rr + P_wb + P_pe + P_ke)/0.976);
+	
+	/*	 	//Logger.logData("A", A); 
+		 	Logger.logData("CdA", CdA); 
+		 	//Logger.logData("rho", rho); 
+		 	//Logger.logData("P", P); 
+		 	Logger.logData("V_tan", V_tan); 
+		   	Logger.logData("V_nor", V_nor); 
+		 	Logger.logData("Yaw", Yaw * 180.0/Math.PI); 
+		 	Logger.logData("V_a", V_a); 
+		 	Logger.logData("slope", slope); 
+		 	
+		 	Logger.logData("P_at", P_at);   
+		 	Logger.logData("P_rr", P_rr);   
+		 	Logger.logData("P_wb", P_wb);   
+		 	Logger.logData("P_pe", P_pe);   
+		 	Logger.logData("P_ke", P_ke);   	 	 */  
 	 	
 		} else {
 
 	 		watts = 0.0;	
 		}
-
 		
-		Logger.logData("watts", watts);
-		Logger.logData("accel", accel);
-		Logger.endLine();   		
+	/*	Logger.logData("watts", watts);
+		Logger.logData("accel", accel);	 */
+		
 		return watts;	
     }
 	

@@ -6,7 +6,7 @@
         <property id="bikeWeight_prop" type="float">8.0</property>  
   
         <property id="temp_prop" type="number">8</property>
-        <property id="windHeading_prop" type="number">350</property>
+        <property id="windHeading_prop" type="number">90</property>
         <property id="windSpeed_prop" type="float">3.0</property>
                 
         <property id="average_prop" type="number">3</property>                  

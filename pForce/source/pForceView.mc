@@ -1,39 +1,41 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
-using Toybox.UserProfile as User;
 using Toybox.Application as App;
 using Toybox.System as Sys;
 using Toybox.Lang as Lang;
 
-const Q_NONE = Gfx.COLOR_RED;
-const Q_POOR = Gfx.COLOR_YELLOW;
-const Q_GOOD = Gfx.COLOR_GREEN;
 
 // need to redefine these constants since access to Position module is not allowed from datafeilds not even the constants !
-//		QUALITY_NOT_AVAILABLE = 0	GPS is not available
-//		QUALITY_LAST_KNOWN = 1		The Location is based on the last known GPS fix.
-//		QUALITY_POOR = 2		The Location was calculated with a poor GPS fix. Only a 2-D GPS fix is available, likely due to a limited number of tracked satellites.
-//		QUALITY_USABLE = 3 	The Location was calculated with a usable GPS fix. A 3-D GPS fix is available, with marginal HDOP (horizontal dilution of precision)
-//		QUALITY_GOOD = 4		The Location was calculated with a good GPS fix. A 3-D GPS fix is available, with good-to-excellent HDOP (horizontal dilution of precision).      
 const		GPS_NOT_AVAILABLE = 0;	//GPS is not available
 const		GPS_LAST_KNOWN = 1;		//The Location is based on the last known GPS fix.
 const		GPS_POOR = 2;			//The Location was calculated with a poor GPS fix. Only a 2-D GPS fix is available, likely due to a limited number of tracked satellites.
 const		GPS_USABLE = 3; 			//The Location was calculated with a usable GPS fix. A 3-D GPS fix is available, with marginal HDOP (horizontal dilution of precision)
 const		GPS_GOOD = 4;			//The Location was calculated with a good GPS fix. A 3-D GPS fix is available, with good-to-excellent HDOP (horizontal dilution of precision).      
-const MAX_POWER_ZONES = 7;
+const 		MAX_POWER_ZONES = 8;
+const 		POWER_SCALE = 100;
+const 		BORDER_PAD = 2;
 
 class pForceView extends Ui.DataField {
 
     hidden var mValue, mValue2;
     
-    hidden var mUserProfile 	 = null;
+    //hidden var mUserProfile 	 = null;
 	hidden var mPower 		 = null;
+	hidden var mDataQuality 	= GPS_NOT_AVAILABLE;
 	
-	hidden var mPowerZones = [ 0, 162, 221, 265, 309, 354, 442, 9999 ];  
-	hidden var mCurrentZone = 1;
+	hidden var mDataFont = Gfx.FONT_LARGE;
+    hidden var mLabelFont = Gfx.FONT_XTINY;
+    hidden var mZoneFont = Gfx.FONT_MEDIUM;
+    
+    hidden var mWidth;
+    hidden var mHeight;
+	
+	hidden var mPowerZones = [ -300,0, 162, 221, 265, 309, 354, 442, 9999 ]; 
 	hidden var mFtpPower = 150.0;
+	hidden var mPowerScale = POWER_SCALE;
 		
 	hidden var mPowerZoneColors = [
+		Gfx.COLOR_WHITE,
 		Gfx.COLOR_LT_GRAY,  // Z1 0 - 162
 		Gfx.COLOR_BLUE,  // z2
 		Gfx.COLOR_DK_GREEN,  // z3
@@ -46,9 +48,6 @@ class pForceView extends Ui.DataField {
     hidden var mDistance = null;
     hidden var mGrade = null;
     hidden var mAvgInterval = 3;
-	hidden var mMeasuredPower = 0.0;
-	
-	hidden var mDataQuality = Q_NONE;
 	
 	function min ( a, b ) { return ( a < b ? a : b ); }
 	
@@ -75,7 +74,7 @@ class pForceView extends Ui.DataField {
 		var perc;
 
 		// get user weight and height from the user profile   .heigth (cm) .weight (grams)		
-		mUserProfile 	= User.getProfile();
+		//mUserProfile 	= User.getProfile();
 		
 		mAvgInterval = 4;
 		
@@ -94,12 +93,10 @@ class pForceView extends Ui.DataField {
 
 		for ( var i=2; i<= MAX_POWER_ZONES; i++ ) {
         		perc = getKey(app, "z"+i.toString()+"_prop", defaultPower[i-1]);         
-            mPowerZones[i-1] = perc * mFtpPower / 100;
-            if (mPowerZones[i-1] < mPowerZones[i-2]) {mPowerZones[i-1]=mPowerZones[i-2]+5;}
+            mPowerZones[i] = perc * mFtpPower / 100;
+            if (mPowerZones[i] < mPowerZones[i-1]) {mPowerZones[i]=mPowerZones[i-1]+5;}
         }        
-		
-		//Sys.println(props);
-		
+
 		mPower.setProps ( props );		
 	}
 
@@ -124,12 +121,9 @@ class pForceView extends Ui.DataField {
 		return 0;
 	}    			
     
-    hidden function dataQuality ( locationAccuracy, pointQuality ) {
-    		mDataQuality = locationAccuracy + pointQuality;
-    	}
     
-// TEMP DEBUG
-    var lastTime = 0;
+    // TEMP DEBUG
+ /*   var lastTime = 0;
     var totalDistance = 0.0;
     var lastLocation = null; 
     var heading = new RollingArray(3);
@@ -159,25 +153,12 @@ class pForceView extends Ui.DataField {
    		
    	}   
     // TEMP DEBUG
-    
+ */   
     function compute(info) {
  
-	 	var datapoint = { };
-/*			:timestamp		=> 0,
-			:bearing			=> 0,
-			:speed			=> 0,
-			:distance		=> 0,
-			:altitude		=> 0,
-			:cadence			=> 0, 
-			:slope			=> 0,
+	 	var datapoint = { }; 
 
-			:heartrate		=> 0,
-			:power			=> 0
-		};
-*/  
-        var dataQuality = 0;
-        
-        correctData ( info );   // correct data for simulator bugs 
+        //correctData ( info );   // correct data for simulator bugs 
 
 		if( info.altitude != null && info.elapsedDistance != null && info.elapsedDistance > 0.0 ) {
 		
@@ -197,84 +178,91 @@ class pForceView extends Ui.DataField {
 
  	   }
                    	
-        	if (info has :elapsedTime ) {   	dataQuality += addKey ( datapoint, :timestamp, info.elapsedTime ); 	}
-        	if (info has :altitude ) {   	dataQuality += addKey ( datapoint, :altitude, info.altitude ); 	}
-        	if (info has :currentSpeed ) {   dataQuality += addKey ( datapoint, :speed, info.currentSpeed ); 	}
-        	if (info has :currentHeading ) {   dataQuality += addKey ( datapoint, :bearing, info.currentHeading ); 	}
-        	if (info has :elapsedDistance ) {   dataQuality += addKey ( datapoint, :distance, info.elapsedDistance ); 	}
-        	if (info has :currentCadence ) {   dataQuality += addKey ( datapoint, :cadence, info.currentCadence ); 	}
+        	if (info has :elapsedTime ) {   	addKey ( datapoint, :timestamp, info.elapsedTime ); 	}
+        	if (info has :altitude ) {   	addKey ( datapoint, :altitude, info.altitude ); 	}
+        	if (info has :currentSpeed ) {   addKey ( datapoint, :speed, info.currentSpeed ); 	}
+        	if (info has :currentHeading ) {  addKey ( datapoint, :bearing, info.currentHeading ); 	}
+        	if (info has :elapsedDistance ) {  addKey ( datapoint, :distance, info.elapsedDistance ); 	}
+        	if (info has :currentCadence ) {  addKey ( datapoint, :cadence, info.currentCadence ); 	}
 
-        	if (info has :currentHeartRate ) {   addKey ( datapoint, :heartrate, info.currentHeartRate ); 	}
         	if (info has :currentPower ) {   addKey ( datapoint, :power, info.currentPower ); 	}
 
-		mDataQuality = 
-			dataQuality ( (info has :currentLocationAccuracy && info.currentLocationAccuracy != null ? info.currentLocationAccuracy : GPS_NOT_AVAILABLE), dataQuality );
+ 		mDataQuality = (info has :currentLocationAccuracy && info.currentLocationAccuracy != null ? info.currentLocationAccuracy : GPS_NOT_AVAILABLE);
 
-		printInfo ( datapoint );
+		//printInfo ( datapoint );
 		
-		mPower.setData ( datapoint );
-		
-		mMeasuredPower = (info has :currentPower &&  info.currentPower != null ? info.currentPower : 0.0);
-		
-		mValue = mPower.calcPower();
-		mCurrentZone = powerZone ( mValue );
-		
-		mValue2 = mPower.calcPower2();	        	        	        				
+		if ( mDataQuality >  GPS_POOR ) {
+			mPower.setData ( datapoint );
+			mValue = mPower.calcPower();
+			mValue2 = mPower.calcPower2();	     
+		}
+		   	     
+		//Logger.endLine();   	   	       	        				
     }
+    
+    	hidden function drawPowerZones (dc, xBase, yBase, maxWidth, barHeight ) {
+		var x, y, width, minZone, maxZone, minPower, maxPower, power;
+
+        x = xBase;  		
+ 		y = yBase+barHeight-dc.getFontHeight(mLabelFont)-BORDER_PAD;
+        minPower = mValue-mPowerScale/2;
+        maxPower = mValue+mPowerScale/2;
+        minZone = powerZone (minPower)-1;
+        maxZone = powerZone (maxPower)-1;
+        power=minPower;
+		for ( var i=minZone; i<=maxZone; i++ ) {		
+			dc.setColor(mPowerZoneColors[i], Gfx.COLOR_TRANSPARENT);
+			width = (mPowerZones[i+1]-power).toFloat()/mPowerScale*maxWidth;
+			dc.fillRectangle(x, yBase, width, barHeight );
+			x += width;
+			power = mPowerZones[i+1];
+		}
+		
+		x = xBase + maxWidth/2;
+		y = yBase+barHeight;
+		dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
+		dc.fillPolygon([[x-7,y],[x,y-9],[x+7,y]]);
+	}
 
     function onLayout(dc) {
-        var obscurityFlags = DataField.getObscurityFlags();
-
-        // Top left quadrant so we'll use the top left layout
-        if (obscurityFlags == (OBSCURE_TOP | OBSCURE_LEFT)) {
-            View.setLayout(Rez.Layouts.TopLeftLayout(dc));
-
-        // Top right quadrant so we'll use the top right layout
-        } else if (obscurityFlags == (OBSCURE_TOP | OBSCURE_RIGHT)) {
-            View.setLayout(Rez.Layouts.TopRightLayout(dc));
-
-        // Bottom left quadrant so we'll use the bottom left layout
-        } else if (obscurityFlags == (OBSCURE_BOTTOM | OBSCURE_LEFT)) {
-            View.setLayout(Rez.Layouts.BottomLeftLayout(dc));
-
-        // Bottom right quadrant so we'll use the bottom right layout
-        } else if (obscurityFlags == (OBSCURE_BOTTOM | OBSCURE_RIGHT)) {
-            View.setLayout(Rez.Layouts.BottomRightLayout(dc));
-
-        // Use the generic, centered layout
-        } else {
-            View.setLayout(Rez.Layouts.MainLayout(dc));
-            var labelView = View.findDrawableById("label");
-            labelView.locY = labelView.locY - 16;
-            var valueView = View.findDrawableById("value");
-            valueView.locY = valueView.locY + 7;
-        }
-
-        View.findDrawableById("label").setText(Rez.Strings.label);
-        return true;
+		mWidth = dc.getWidth();
+		mHeight = dc.getHeight();
     }
 
     // Display the value you computed here. This will be called
     // once a second when the data field is visible.
     function onUpdate(dc) {
+
         // Set the background color
-        View.findDrawableById("Background").setColor(getBackgroundColor());
-
-        // Set the foreground color and value
-        var value = View.findDrawableById("value");
-        if (getBackgroundColor() == Gfx.COLOR_BLACK) {
-            value.setColor(Gfx.COLOR_WHITE);
-        } else {
-            value.setColor(Gfx.COLOR_BLACK);
-        }
-       	value.setColor(mPowerZoneColors[mCurrentZone-1]);
-        value.setText(mValue.format("%d") + " | " + mMeasuredPower.format("%d") + " | " + mValue2.format("%d") );
-
-        // Call parent's onUpdate(dc) to redraw the layout
-        View.onUpdate(dc);
+        dc.setColor(Gfx.COLOR_BLACK, getBackgroundColor());
+        dc.clear();
+        			
+ 		if ( mDataQuality >  GPS_POOR ) {
+ 
+ 			var powerstr = mValue.format("%d");
+ 			drawPowerZones( dc, 0, 0,dc.getWidth(), dc.getHeight()); 		
+		
+	        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
+	        dc.drawText(mWidth/2, BORDER_PAD, mLabelFont, "Est Power", Gfx.TEXT_JUSTIFY_CENTER);
+	   		dc.drawText(mWidth/2, mHeight/2-Gfx.getFontAscent(mDataFont)/2, mDataFont, powerstr,  Gfx.TEXT_JUSTIFY_CENTER); 		
+				
+			var y=mHeight/2 + Gfx.getFontAscent(mDataFont)/2 - Gfx.getFontAscent(mLabelFont);	
+			var x=mWidth/2+dc.getTextDimensions(powerstr, mDataFont)[0]/2+BORDER_PAD;
+			
+	        dc.drawText(x, y, mLabelFont, "watts", Gfx.TEXT_JUSTIFY_LEFT);  
+	        // draw zone
+	        y = y - Gfx.getFontAscent(mZoneFont);
+	        dc.drawText(x, y, mZoneFont, "Z" + (powerZone(mValue)-1).toString(), Gfx.TEXT_JUSTIFY_LEFT);
+	     
+	    } else { 
+	     
+	     	dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
+	        dc.drawText(mWidth/2, BORDER_PAD, mLabelFont, "Est Power", Gfx.TEXT_JUSTIFY_CENTER);
+	   		dc.drawText(mWidth/2, mHeight/2-Gfx.getFontAscent(mDataFont)/2, mDataFont, "Poor GPS",  Gfx.TEXT_JUSTIFY_CENTER); 		
+	   	}
     }
 
-    function printInfo ( info ) {
+ /*   function printInfo ( info ) {
     		Logger.startLine();
         if (info.hasKey(:timestamp) ) {   	Logger.logData(":timestamp", info.get (:timestamp)); 	}
         	if (info.hasKey(:altitude )) {   	Logger.logData( " :altitude",info.get (:altitude) ); 	}
@@ -283,12 +271,9 @@ class pForceView extends Ui.DataField {
         	if (info.hasKey(:distance )) {   Logger.logData( " :distance", info.get (:distance)); 	}
         	if (info.hasKey(:cadence )) {   Logger.logData( " :cadence", info.get (:cadence)); 	}
 
-        //	if (info.hasKey(:heartrate )) {   Logger.logData( ":heartrate", info.get (:heartrate));	}
         	if (info.hasKey(:power )) {   Logger.logData( ":power",info.get (:power)); 	}
-        //	if (info.hasKey(:latitude )) { 	Logger.logData("latitude", info.get(:latitude)); }
-		//if (info.hasKey(:longitude )) { Logger.logData("longitude", info.get(:longitude)); }
     }
-    
+    */
 
 }
 
