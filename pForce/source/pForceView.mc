@@ -234,11 +234,10 @@ class pForceView extends Ui.DataField {
 	        dc.drawText(mWidth/2, BORDER_PAD, mLabelFont, "Est Power [W]", Gfx.TEXT_JUSTIFY_CENTER);
 	   		dc.drawText(mWidth/2, mHeight/2-Gfx.getFontAscent(mDataFont)/2, 
 	   			mDataFont, mValue.format("%d") + " Z" + zone.toString(),  Gfx.TEXT_JUSTIFY_CENTER); 		
-				
+				 
 	    } else { 
-	     
 	     	dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
-	        dc.drawText(mWidth/2, BORDER_PAD, mLabelFont, "Est Power", Gfx.TEXT_JUSTIFY_CENTER);
+	        dc.drawText(mWidth/2, BORDER_PAD, mLabelFont, "Est Power [W]", Gfx.TEXT_JUSTIFY_CENTER);
 	   		dc.drawText(mWidth/2, mHeight/2-Gfx.getFontAscent(mDataFont)/2, mDataFont, "Poor GPS",  Gfx.TEXT_JUSTIFY_CENTER); 		
 	   	}
     }
