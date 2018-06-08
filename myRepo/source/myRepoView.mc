@@ -14,7 +14,7 @@ class myRepoView extends Ui.SimpleDataField {
     // guarantee that compute() will be called before onUpdate().
     function compute(info) {
         // See Activity.Info in the documentation for available information.
-        return 0.0 + 0.0;
+        return 0.0;
     }
 
 }
