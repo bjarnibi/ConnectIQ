@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <debugInfo>
 <pcToLineNum>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoView.mc" lineNum="6" pc="268435456" symbol="initialize"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoView.mc" lineNum="7" pc="268435460" symbol="initialize"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoView.mc" lineNum="8" pc="268435478" symbol="initialize"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoView.mc" lineNum="15" pc="268435492" symbol="compute"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoView.mc" lineNum="17" pc="268435496" symbol="compute"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoApp.mc" lineNum="5" pc="268435503" symbol="initialize"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoApp.mc" lineNum="6" pc="268435507" symbol="initialize"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoApp.mc" lineNum="10" pc="268435526" symbol="onStart"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoApp.mc" lineNum="14" pc="268435531" symbol="onStop"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoApp.mc" lineNum="18" pc="268435536" symbol="getInitialView"/>
-<entry filename="/Users/bjarni/Dev/eclipse.workspace.connectiq.oxygen/myRepo/./source/myRepoApp.mc" lineNum="19" pc="268435540" symbol="getInitialView"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoApp.mc" lineNum="5" pc="268435456" symbol="initialize"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoApp.mc" lineNum="6" pc="268435460" symbol="initialize"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoApp.mc" lineNum="10" pc="268435479" symbol="onStart"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoApp.mc" lineNum="14" pc="268435484" symbol="onStop"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoApp.mc" lineNum="18" pc="268435489" symbol="getInitialView"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoApp.mc" lineNum="19" pc="268435493" symbol="getInitialView"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoView.mc" lineNum="6" pc="268435531" symbol="initialize"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoView.mc" lineNum="7" pc="268435535" symbol="initialize"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoView.mc" lineNum="8" pc="268435553" symbol="initialize"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoView.mc" lineNum="15" pc="268435567" symbol="compute"/>
+<entry filename="/Users/bjarni/Dev/Git-repos/ConnectIQ/myRepo/./source/myRepoView.mc" lineNum="17" pc="268435571" symbol="compute"/>
 </pcToLineNum>
 <symbolTable>
 <entry field="true" id="8388611" module="true" symbol="Toybox"/>
 <entry id="8388770" module="true" object="true" symbol="Strings"/>
 <entry id="8389280" method="true" symbol="getInitialView"/>
-<entry id="9" object="true" symbol="myRepoView"/>
+<entry id="10" object="true" symbol="myRepoView"/>
 <entry id="8388769" module="true" object="true" symbol="Rez"/>
 <entry id="8388702" method="true" symbol="initialize"/>
 <entry field="true" id="14" symbol="AppName"/>
@@ -27,25 +27,18 @@
 <entry id="8389137" method="true" symbol="compute"/>
 <entry id="8389279" method="true" symbol="onStart"/>
 <entry id="12" module="true" symbol="Layouts"/>
-<entry id="10" object="true" symbol="myRepoApp"/>
+<entry id="9" object="true" symbol="myRepoApp"/>
 <entry id="8390088" module="true" object="true" symbol="JsonData"/>
 <entry id="11" module="true" symbol="Menus"/>
 <entry id="8388772" module="true" object="true" symbol="Fonts"/>
 </symbolTable>
 <localVars>
-<entry endPc="268435503" name="info" stackId="1" startPc="268435492"/>
-<entry endPc="268435531" name="state" stackId="1" startPc="268435526"/>
-<entry endPc="268435536" name="state" stackId="1" startPc="268435531"/>
+<entry endPc="268435484" name="state" stackId="1" startPc="268435479"/>
+<entry endPc="268435489" name="state" stackId="1" startPc="268435484"/>
+<entry endPc="268435578" name="info" stackId="1" startPc="268435567"/>
 </localVars>
 <annotations/>
 <functions>
-<functionEntry accessMode="public" name="initialize" parent="myRepoView">
-<documentation/>
-</functionEntry>
-<functionEntry accessMode="public" name="compute" parent="myRepoView">
-<param id="info"/>
-<documentation/>
-</functionEntry>
 <functionEntry accessMode="public" name="initialize" parent="myRepoApp">
 <documentation/>
 </functionEntry>
@@ -58,6 +51,13 @@
 <documentation/>
 </functionEntry>
 <functionEntry accessMode="public" name="getInitialView" parent="myRepoApp">
+<documentation/>
+</functionEntry>
+<functionEntry accessMode="public" name="initialize" parent="myRepoView">
+<documentation/>
+</functionEntry>
+<functionEntry accessMode="public" name="compute" parent="myRepoView">
+<param id="info"/>
 <documentation/>
 </functionEntry>
 </functions>
